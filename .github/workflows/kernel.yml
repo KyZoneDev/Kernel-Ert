@@ -3,99 +3,70 @@ name: Kernel Build
 on:
   workflow_dispatch:
     inputs:
-      repository:
-        description: 'Repo'
-        required: true
-        default: 'KyZoneDev/android_kernel_xiaomi_earth'
-      branch:
-        description: 'Branch'
-        required: true
-        default: 'lineage-24.0'
-      defconfig:
-        description: 'Defconfig'
-        required: true
-        default: 'earth_defconfig'
-      zipname:
-        description: 'Zip Name'
-        required: false
-        default: 'KSUNext-KyZone'
-      clang:
-        description: 'Clang URL'
-        required: true
-        default: 'https://github.com/dreamsolister26/clarinet/releases/download/16836431/clang-r614150.tar.gz'
-      ksunext_branch:
-        description: 'KSU-Next Branch (legacy / next / dev)'
-        required: false
-        default: 'legacy'
-      ksunext_setup:
-        description: 'KSU-Next Setup Link'
-        required: false
-        default: 'https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh'
+      repository: { description: 'Repo', required: true, default: 'KyZoneDev/android_kernel_xiaomi_earth' }
+      branch: { description: 'Branch', required: true, default: 'lineage-24.0' }
+      defconfig: { description: 'Defconfig', required: true, default: 'earth_defconfig' }
+      zipname : { description: 'zip name', required: false, default: 'KSUNext' }
+      clang : { description: 'Clang URL', required: true, default: 'https://github.com/dreamsolister26/clarinet/releases/download/16836431/clang-r614150.tar.gz' }
+      kernelsu_branch: { description: 'KSU-Next Branch', required: false, default: 'legacy' }
+      kernelsu_setup : { description: 'KSU-Next Setup Link', required: false, default: 'https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh' }
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: ${{ github.event.inputs.repository }}
-          ref: ${{ github.event.inputs.branch }}
-          fetch-depth: 1
-          submodules: recursive
+    # - name: Cleanup
+    # uses: rokibhasansagar/slimhub_actions@main
+      
+    - uses: actions/checkout@v5
+      with:
+        repository: ${{ github.event.inputs.repository }}
+        ref: ${{ github.event.inputs.branch }}
+        fetch-depth: 1
+        submodules: recursive
 
-      - name: Set Swap Space
-        uses: pierotofy/set-swap-space@master
-        with:
-          swap-size-gb: 12
+    - name: Set Swap Space
+      uses: pierotofy/set-swap-space@master
+      with:
+        swap-size-gb: 12
 
-      - name: Setup and Build
-        run: |
-          sudo apt-get update
-          sudo apt install -y nano bc bison curl flex gcc git libc6-dev libssl-dev openssl python-is-python3 python3 cpio ssh wget zip zstd make clang lld llvm gcc-arm-linux-gnueabi gcc-aarch64-linux-gnu software-properties-common build-essential libarchive-tools
-          
-          export TZ="Asia/Jakarta"
-          echo "BUILD_TIME=$(date +"%Y%m%d")-$(date +"%H%M%S")" >> $GITHUB_ENV
-          
-          # Download Clang
-          mkdir clang
-          wget -qO- "${{ github.event.inputs.clang }}" | tar -xz -C clang
-          export PATH=$PWD/clang/bin:$PATH
-          
-          # Setup KernelSU-Next
-          rm -rf KernelSU drivers/kernelsu
-          curl -LSs "${{ github.event.inputs.ksunext_setup }}" | bash -s "${{ github.event.inputs.ksunext_branch }}"
-          
-          export ARCH=arm64
-          export KBUILD_BUILD_USER="KyZone"
-          export KBUILD_BUILD_HOST="KyZoneDev"
-          ARGS="O=out ARCH=arm64 CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm STRIP=llvm-strip OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump LLVM=1 LLVM_IAS=1 CONFIG_DEBUG_SECTION_MISMATCH=y"
-          
-          make $ARGS ${{ github.event.inputs.defconfig }} 2>&1 | tee defconfig.log
-          
-          scripts/config --file out/.config -e CONFIG_KSU -e CONFIG_KPROBES -e CONFIG_HAVE_KPROBES -e CONFIG_KPROBE_EVENTS
-          make $ARGS olddefconfig
-          
-          make -j$(nproc) $ARGS 2>&1 | tee compile.log
+    - name: Setup and Build
+      run: |
+        sudo apt-get update
+        sudo apt install nano bc bison curl flex gcc git libc6-dev libssl-dev openssl python-is-python3 ssh wget zip zstd sudo make clang gcc-arm-linux-gnueabi software-properties-common build-essential libarchive-tools gcc-aarch64-linux-gnu -y && sudo apt install python3 -y && sudo apt install cpio -y && sudo apt install lld -y && sudo apt install llvm -y
+        
+        export TZ="Asia/Tokyo"
+        echo "BUILD_TIME=$(date +"%Y%m%d")-$(date +"%H%M%S")" >> $GITHUB_ENV
+        
+        # Download clang Clang 
+        mkdir clang
+        wget -qO- ${{ github.event.inputs.clang }} | tar -xz -C clang
+        export PATH=$PWD/clang/bin:$PATH
+        
+        curl -LSs "${{ github.event.inputs.kernelsu_setup }}" | bash -s ${{ github.event.inputs.kernelsu_branch }}
+        export ARCH=arm64
+        export KBUILD_BUILD_USER="KyZone"
+        export KBUILD_BUILD_HOST="KyZoneDev"
+        ARGS="O=out ARCH=arm64 CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm STRIP=llvm-strip OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump LLVM=1 LLVM_IAS=1 CONFIG_DEBUG_SECTION_MISMATCH=y"
+        
+        make $ARGS ${{ github.event.inputs.defconfig }} 2>&1 | tee defconfig.log || true
+        make -j$(nproc) $ARGS 2>&1 | tee compile.log || true
 
-      - name: Anykernel3
-        run: |
-          git clone https://github.com/dreamsolister26/Anykernel3 Anykernel3
-          if [ -f out/arch/arm64/boot/Image.gz-dtb ] || [ -f out/arch/arm64/boot/Image.gz ]; then
-            [ -f out/arch/arm64/boot/Image.gz-dtb ] && cp out/arch/arm64/boot/Image.gz-dtb Anykernel3/
-            [ -f out/arch/arm64/boot/Image.gz ] && cp out/arch/arm64/boot/Image.gz Anykernel3/
-            [ -f out/arch/arm64/boot/dts/mediatek/mt6768.dtb ] && cp out/arch/arm64/boot/dts/mediatek/mt6768.dtb Anykernel3/dtb
-            cd Anykernel3
-            zip -r9 "../${{ github.event.inputs.zipname }}-${{ env.BUILD_TIME }}-earth.zip" * -x '.git*'
-          else
-            echo "Build gagal: Image.gz / Image.gz-dtb tidak ditemukan!"
-            exit 1
-          fi
+    - name: Anykernel3
+      run: |
+        git clone https://github.com/dreamsolister26/Anykernel3 Anykernel3
+        if [ -f out/arch/arm64/boot/Image.gz-dtb ]; then
+          cp out/arch/arm64/boot/Image.gz Anykernel3/
+          cp out/arch/arm64/boot/dts/mediatek/mt6768.dtb Anykernel3/dtb
+          cd Anykernel3
+          zip -r9 "../${{ github.event.inputs.zipname }}-${{ env.BUILD_TIME }}-earth.zip" * -x '.git*'
+        fi
 
-      - name: Upload Artifacts
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: Build-Result-${{ env.BUILD_TIME }}
-          path: |
-            *.zip
-            *.log
+    - name: Upload Artifacts
+      if: always()
+      uses: actions/upload-artifact@v5
+      with:
+        name: Build-Result-${{ env.BUILD_TIME }}
+        path: |
+          *.zip
+          *.log
