@@ -6,18 +6,15 @@ on:
       repository: { description: 'Repo', required: true, default: 'KyZoneDev/android_kernel_xiaomi_earth' }
       branch: { description: 'Branch', required: true, default: 'lineage-24.0' }
       defconfig: { description: 'Defconfig', required: true, default: 'earth_defconfig' }
-      zipname : { description: 'zip name', required: false, default: 'KSUNext' }
+      zipname : { description: 'zip name', required: false, default: 'KSUNext-SUSFS' }
       clang : { description: 'Clang URL', required: true, default: 'https://github.com/dreamsolister26/clarinet/releases/download/16836431/clang-r614150.tar.gz' }
-      kernelsu_branch: { description: 'KSU-Next Branch', required: false, default: 'legacy' }
-      kernelsu_setup : { description: 'KSU-Next Setup Link', required: false, default: 'https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh' }
+      kernelsu_branch: { description: 'KSU-Next Branch', required: false, default: 'legacy-susfs-v2' }
+      kernelsu_setup : { description: 'KSU-Next Setup Link (jika menggunakan upstream)', required: false, default: 'https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh' }
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    # - name: Cleanup
-    # uses: rokibhasansagar/slimhub_actions@main
-      
     - uses: actions/checkout@v5
       with:
         repository: ${{ github.event.inputs.repository }}
@@ -38,12 +35,25 @@ jobs:
         export TZ="Asia/Tokyo"
         echo "BUILD_TIME=$(date +"%Y%m%d")-$(date +"%H%M%S")" >> $GITHUB_ENV
         
-        # Download clang Clang 
+        # Download Clang
         mkdir clang
         wget -qO- ${{ github.event.inputs.clang }} | tar -xz -C clang
         export PATH=$PWD/clang/bin:$PATH
         
-        curl -LSs "${{ github.event.inputs.kernelsu_setup }}" | bash -s ${{ github.event.inputs.kernelsu_branch }}
+        # Setup KernelSU-Next (Mendukung branch legacy-susfs-v2 atau legacy upstream)
+        if [ "${{ github.event.inputs.kernelsu_branch }}" = "legacy-susfs-v2" ] || [ "${{ github.event.inputs.kernelsu_branch }}" = "legacy-susfs" ]; then
+          echo "[+] Menggunakan KernelSU-Next dengan SUSFS v2 (sidex15)"
+          git clone --depth=1 -b ${{ github.event.inputs.kernelsu_branch }} https://github.com/sidex15/KernelSU-Next.git KernelSU-Next
+          cd drivers
+          ln -sf ../KernelSU-Next/kernel kernelsu
+          grep -q "kernelsu" Makefile || printf "\nobj-\$(CONFIG_KSU) += kernelsu/\n" >> Makefile
+          grep -q "source \"drivers/kernelsu/Kconfig\"" Kconfig || sed -i "/endmenu/i\source \"drivers/kernelsu/Kconfig\"" Kconfig
+          cd ..
+        else
+          echo "[+] Menggunakan KernelSU-Next upstream setup.sh"
+          curl -LSs "${{ github.event.inputs.kernelsu_setup }}" | bash -s ${{ github.event.inputs.kernelsu_branch }}
+        fi
+
         export ARCH=arm64
         export KBUILD_BUILD_USER="KyZone"
         export KBUILD_BUILD_HOST="KyZoneDev"
