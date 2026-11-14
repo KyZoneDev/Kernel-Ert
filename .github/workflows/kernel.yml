@@ -5,7 +5,7 @@ on:
     inputs:
       repository: { description: 'Repo', required: true, default: 'KyZoneDev/android_kernel_xiaomi_earth' }
       branch: { description: 'Branch', required: true, default: 'lineage-24.0' }
-      defconfig: { description: 'Defconfig', required: true, default: 'earth_defconfig' }
+      defconfig: { description: 'Defconfig', required: true, default: 'CONFIG_LOCALVERSION="KyZone Kernel" # CONFIG_LOCALVERSION_AUTO is not set' }
       zipname : { description: 'zip name', required: false, default: 'KSUNext' }
       clang : { description: 'Clang URL', required: true, default: 'https://github.com/dreamsolister26/clarinet/releases/download/16836431/clang-r614150.tar.gz' }
       kernelsu_branch: { description: 'KSU-Next Branch', required: false, default: 'legacy' }
