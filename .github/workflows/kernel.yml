@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       repository: { description: 'Repo', required: true, default: 'KyZoneDev/android_kernel_xiaomi_earth' }
-      branch: { description: 'Branch', required: true, default: 'lineage-24.0' }
+      branch: { description: 'Branch (default: feat/overclock; ganti mis. lineage-24.0 untuk build stock)', required: true, default: 'feat/overclock' }
       defconfig: { description: 'Defconfig', required: true, default: 'earth_defconfig' }
       zipname : { description: 'zip name', required: false, default: 'KSUNext-SUSFS' }
       clang : { description: 'Clang URL', required: true, default: 'https://github.com/dreamsolister26/clarinet/releases/download/16836431/clang-r614150.tar.gz' }
