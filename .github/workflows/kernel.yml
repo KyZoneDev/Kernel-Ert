@@ -74,7 +74,7 @@ jobs:
         ARGS="O=out ARCH=arm64 CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm STRIP=llvm-strip OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump LLVM=1 LLVM_IAS=1 CONFIG_DEBUG_SECTION_MISMATCH=y"
         
         make $ARGS ${{ github.event.inputs.defconfig }} 2>&1 | tee defconfig.log
-        make -j$(nproc) $ARGS 2>&1 | tee compile.log
+        make -k -j$(nproc) $ARGS 2>&1 | tee compile.log
 
     - name: Anykernel3
       run: |
