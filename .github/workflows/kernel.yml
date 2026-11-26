@@ -7,7 +7,7 @@ on:
       branch: { description: 'Branch (default: feat/overclock; ganti mis. lineage-24.0 untuk build stock)', required: true, default: 'feat/overclock' }
       defconfig: { description: 'Defconfig', required: true, default: 'earth_defconfig' }
       zipname : { description: 'zip name', required: false, default: 'KSUNext-SUSFS' }
-      clang : { description: 'Clang URL', required: true, default: 'https://github.com/dreamsolister26/clarinet/releases/download/16836431/clang-r614150.tar.gz' }
+      clang : { description: 'Clang URL (default: KyZone clang 24)', required: true, default: 'https://github.com/KyZoneDev/clang-24/releases/download/clang-24.0.0git-20261126-cc3860760414-x86_64/clang-24.0.0git-20261126-cc3860760414-x86_64.tar.gz' }
       kernelsu_branch: { description: 'KSU-Next Branch', required: false, default: 'legacy-susfs-v2' }
       kernelsu_setup : { description: 'KSU-Next Setup Link (jika menggunakan upstream)', required: false, default: 'https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh' }
 
