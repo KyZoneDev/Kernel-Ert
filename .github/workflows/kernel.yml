@@ -37,9 +37,22 @@ jobs:
         echo "BUILD_TIME=$(date +"%Y%m%d")-$(date +"%H%M%S")" >> $GITHUB_ENV
         
         # Download Clang
-        mkdir clang
-        wget -qO- ${{ github.event.inputs.clang }} | tar -xz -C clang
+        if [ "${{ github.event.inputs.clang }}" = "apt24" ]; then
+          # LLVM 24 development snapshot from apt.llvm.org (for quick testing)
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc >/dev/null
+          echo "deb http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/llvm-snap.list
+          sudo apt-get update
+          sudo apt-get install -y clang-24 lld-24 llvm-24
+          mkdir -p clang/bin
+          for t in clang clang++ ld.lld lld llvm-ar llvm-nm llvm-strip llvm-objcopy llvm-objdump llvm-readelf llvm-readobj llvm-size llvm-ranlib llvm-as llvm-dis llvm-link llvm-config llvm-addr2line llvm-strings llvm-cxxfilt llvm-symbolizer llvm-dwarfdump; do
+            [ -x /usr/lib/llvm-24/bin/$t ] && ln -sf /usr/lib/llvm-24/bin/$t clang/bin/$t
+          done
+        else
+          mkdir clang
+          wget -qO- ${{ github.event.inputs.clang }} | tar -xz -C clang
+        fi
         export PATH=$PWD/clang/bin:$PATH
+        clang --version | head -1
         
         # Setup KernelSU-Next (Mendukung branch legacy-susfs-v2 atau legacy upstream)
         if [ "${{ github.event.inputs.kernelsu_branch }}" = "legacy-susfs-v2" ] || [ "${{ github.event.inputs.kernelsu_branch }}" = "legacy-susfs" ]; then
