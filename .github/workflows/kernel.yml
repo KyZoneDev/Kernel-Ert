@@ -14,6 +14,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - uses: actions/checkout@v5
       with:
@@ -101,3 +103,20 @@ jobs:
         name: Logs-${{ env.BUILD_TIME }}
         path: |
           *.log
+
+    - name: Release
+      if: ${{ hashFiles('*-earth.zip') != '' }}
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        ZIP=$(ls *-earth.zip | head -1)
+        TAG="kernel-${{ env.BUILD_TIME }}"
+        CLANG_VER="$(clang/bin/clang --version | head -1)"
+        gh release create "$TAG" "$ZIP" \
+          --repo "$GITHUB_REPOSITORY" \
+          --title "Kernel earth ${{ env.BUILD_TIME }}" \
+          --notes "Repo: ${{ github.event.inputs.repository }}
+        Branch: ${{ github.event.inputs.branch }}
+        Defconfig: ${{ github.event.inputs.defconfig }}
+        Compiler: ${CLANG_VER}
+        Flash via recovery."
