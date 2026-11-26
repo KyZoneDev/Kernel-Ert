@@ -86,11 +86,18 @@ jobs:
           zip -r9 "../${{ github.event.inputs.zipname }}-${{ env.BUILD_TIME }}-earth.zip" * -x '.git*'
         fi
 
-    - name: Upload Artifacts
+    - name: Upload Kernel Zip
+      uses: actions/upload-artifact@v5
+      with:
+        name: Kernel-${{ env.BUILD_TIME }}
+        path: ${{ github.event.inputs.zipname }}-${{ env.BUILD_TIME }}-earth.zip
+        compression-level: 0
+        if-no-files-found: warn
+
+    - name: Upload Logs
       if: always()
       uses: actions/upload-artifact@v5
       with:
-        name: Build-Result-${{ env.BUILD_TIME }}
+        name: Logs-${{ env.BUILD_TIME }}
         path: |
-          *.zip
           *.log
