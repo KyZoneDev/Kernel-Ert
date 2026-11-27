@@ -36,6 +36,14 @@ jobs:
         sudo apt install nano bc bison curl flex gcc git libc6-dev libssl-dev openssl python-is-python3 ssh wget zip zstd sudo make clang gcc-arm-linux-gnueabi software-properties-common build-essential libarchive-tools gcc-aarch64-linux-gnu -y && sudo apt install python3 -y && sudo apt install cpio -y && sudo apt install lld -y && sudo apt install llvm -y
         
         export TZ="Asia/Tokyo"
+        # Detect kernel variant from branch name (OC / Non-OC / Stock)
+        case "${{ github.event.inputs.branch }}" in
+          *non-oc*|*nonoc*) VARIANT="Non-OC" ;;
+          *overclock*|*perf-tune*|*oc*) VARIANT="OC" ;;
+          *) VARIANT="Stock" ;;
+        esac
+        echo "VARIANT=$VARIANT" >> $GITHUB_ENV
+        echo "VARIANT_SLUG=$(echo $VARIANT | tr 'A-Z' 'a-z')" >> $GITHUB_ENV
         echo "BUILD_TIME=$(date +"%Y%m%d")-$(date +"%H%M%S")" >> $GITHUB_ENV
         
         # Download Clang
@@ -94,6 +102,7 @@ jobs:
           echo "==================================="
           echo "Linux Version    : v${KVER}"
           echo "Author           : KyZone"
+          echo "Variant          : ${{ env.VARIANT }}"
           echo "KSU NEXT Version : ${KSU_TAG:-unknown} - ${KSU_VER:-unknown}"
           echo "==================================="
           echo "- Compile with Clang ${CLANG_NAME}"
@@ -105,14 +114,14 @@ jobs:
           cp out/arch/arm64/boot/Image.gz Anykernel3/
           cp out/arch/arm64/boot/dts/mediatek/mt6768.dtb Anykernel3/dtb
           cd Anykernel3
-          zip -r9 "../${{ github.event.inputs.zipname }}-${{ env.BUILD_TIME }}-earth.zip" * -x '.git*'
+          zip -r9 "../${{ github.event.inputs.zipname }}-${{ env.VARIANT_SLUG }}-${{ env.BUILD_TIME }}-earth.zip" * -x '.git*'
         fi
 
     - name: Upload Kernel Zip
       uses: actions/upload-artifact@v5
       with:
         name: Kernel-${{ env.BUILD_TIME }}
-        path: ${{ github.event.inputs.zipname }}-${{ env.BUILD_TIME }}-earth.zip
+        path: ${{ github.event.inputs.zipname }}-${{ env.VARIANT_SLUG }}-${{ env.BUILD_TIME }}-earth.zip
         compression-level: 0
         if-no-files-found: warn
 
@@ -134,8 +143,9 @@ jobs:
         CLANG_VER="$(clang/bin/clang --version | head -1)"
         gh release create "$TAG" "$ZIP" \
           --repo "$GITHUB_REPOSITORY" \
-          --title "Kernel earth ${{ env.BUILD_TIME }}" \
-          --notes "Repo: ${{ github.event.inputs.repository }}
+          --title "Kernel earth [${{ env.VARIANT }}] ${{ env.BUILD_TIME }}" \
+          --notes "Variant: ${{ env.VARIANT }}
+        Repo: ${{ github.event.inputs.repository }}
         Branch: ${{ github.event.inputs.branch }}
         Defconfig: ${{ github.event.inputs.defconfig }}
         Compiler: ${CLANG_VER}
